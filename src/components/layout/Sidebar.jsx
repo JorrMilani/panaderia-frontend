@@ -1,6 +1,6 @@
 import { useAuth } from "../../context/AuthContext";
 
-function Sidebar() {
+function Sidebar({ setView }) {
   const { user, logout } = useAuth();
 
   return (
@@ -9,20 +9,16 @@ function Sidebar() {
         <h1 className="text-xl font-bold mb-8">Panadería App</h1>
 
         <nav className="flex flex-col gap-4">
-          <button className="text-left hover:text-secondary">
+          <button onClick={() => setView("dashboard")}>
             Dashboard
           </button>
 
-          <button className="text-left hover:text-secondary">
+          <button onClick={() => setView("clients")}>
             Clientes
           </button>
 
-          <button className="text-left hover:text-secondary">
+          <button onClick={() => setView("orders")}>
             Pedidos
-          </button>
-
-          <button className="text-left hover:text-secondary">
-            Rutas
           </button>
         </nav>
       </div>
