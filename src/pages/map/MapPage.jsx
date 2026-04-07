@@ -1,89 +1,75 @@
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { useEffect, useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import API from "../../api/axios";
+import L from "leaflet";
 
-function MapPage() {
+export default function MapPage() {
   const [clients, setClients] = useState([]);
-  const [sortedClients, setSortedClients] = useState([]);
+  const [userLocation, setUserLocation] = useState(null);
 
-  // 📍 TU UBICACIÓN (CAMBIAR SI QUERÉS)
-  const origin = {
-    lat: -26.8083,
-    lng: -65.2176,
-  };
-
-  // 🧠 CALCULAR DISTANCIA
-  const getDistance = (lat1, lon1, lat2, lon2) => {
-    return Math.sqrt(
-      Math.pow(lat2 - lat1, 2) + Math.pow(lon2 - lon1, 2)
-    );
-  };
+  // 🔥 ICONO USUARIO (para diferenciar)
+  const userIcon = new L.Icon({
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/64/64113.png",
+    iconSize: [30, 30],
+  });
 
   useEffect(() => {
-    const getClients = async () => {
-      const res = await API.get("/clients");
+    fetchClients();
 
-      const clientsWithDistance = res.data.map((c) => {
-        const distance = getDistance(
-          origin.lat,
-          origin.lng,
-          c.location?.lat || 0,
-          c.location?.lng || 0
-        );
-
-        return { ...c, distance };
-      });
-
-      // 🔥 ORDENAR
-      const sorted = clientsWithDistance.sort(
-        (a, b) => a.distance - b.distance
-      );
-
-      setClients(res.data);
-      setSortedClients(sorted);
-    };
-
-    getClients();
+    // 📍 OBTENER UBICACIÓN REAL
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      (error) => {
+        console.error("Error ubicación:", error);
+      }
+    );
   }, []);
+
+  const fetchClients = async () => {
+    try {
+      const res = await API.get("/clients");
+      setClients(res.data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-4">
-        Ruta de Reparto
-      </h1>
+      <h2 className="text-2xl font-bold mb-4">Mapa de reparto</h2>
 
-      {/* 🗺️ MAPA */}
       <MapContainer
-        center={[origin.lat, origin.lng]}
+        center={userLocation ? [userLocation.lat, userLocation.lng] : [-26.8, -65.2]}
         zoom={13}
-        style={{ height: "400px" }}
+        style={{ height: "500px", width: "100%" }}
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
+        {/* 🔵 TU UBICACIÓN */}
+        {userLocation && (
+          <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon}>
+            <Popup>Estás acá</Popup>
+          </Marker>
+        )}
+
+        {/* 🔴 CLIENTES */}
         {clients.map((c) =>
           c.location?.lat ? (
-            <Marker
-              key={c._id}
-              position={[c.location.lat, c.location.lng]}
-            >
-              <Popup>{c.name}</Popup>
+            <Marker key={c._id} position={[c.location.lat, c.location.lng]}>
+              <Popup>
+                <strong>{c.name}</strong>
+                <br />
+                {c.address}
+              </Popup>
             </Marker>
           ) : null
         )}
       </MapContainer>
-
-      {/* 📋 LISTA ORDENADA */}
-      <div className="mt-4">
-        <h2 className="text-xl mb-2">Orden de entrega</h2>
-
-        {sortedClients.map((c, index) => (
-          <div key={c._id} className="bg-white p-2 mb-2 shadow">
-            #{index + 1} - {c.name} ({c.address})
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
-
-export default MapPage;

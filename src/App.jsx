@@ -3,7 +3,7 @@ import Login from "./pages/auth/Login";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Clients from "./pages/clients/Clients";
 import Orders from "./pages/orders/Orders";
-import MapPage from "./pages/map/MapPage";
+import MapPage from "./pages/map/MapPage"; // ✅ SOLO UNO
 
 function App() {
   const [path, setPath] = useState("/login");
@@ -18,8 +18,9 @@ function App() {
 
   return (
     <div className="min-h-screen bg-light">
+
       {/* NAVBAR */}
-      <nav className="bg-primary p-4 flex gap-4">
+      <nav className="bg-primary p-4 flex gap-4 text-white">
         <button onClick={() => setPath("/dashboard")}>Dashboard</button>
         <button onClick={() => setPath("/clients")}>Clientes</button>
         <button onClick={() => setPath("/orders")}>Pedidos</button>
@@ -31,6 +32,7 @@ function App() {
       <div className="p-4">
         {renderView()}
       </div>
+
     </div>
   );
 }
