@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import API from "../../api/axios";
 
-function Orders() {
+export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [clients, setClients] = useState([]);
-
   const [form, setForm] = useState({
     client: "",
     product: "",
@@ -12,39 +11,25 @@ function Orders() {
     price: 0,
   });
 
-  const getOrders = async () => {
-    try {
-      const res = await API.get("/orders");
-      setOrders(res.data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  // 🔥 CARGAR DATOS
+  const fetchData = async () => {
+    const resOrders = await API.get("/orders");
+    const resClients = await API.get("/clients");
 
-  const getClients = async () => {
-    try {
-      const res = await API.get("/clients");
-      setClients(res.data);
-    } catch (error) {
-      console.error(error);
-    }
+    setOrders(resOrders.data);
+    setClients(resClients.data);
   };
 
   useEffect(() => {
-    getOrders();
-    getClients();
+    fetchData();
   }, []);
 
+  // 🔥 CREAR PEDIDO
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.client || !form.product || !form.price) {
-      alert("Completar todos los campos");
-      return;
-    }
-
     try {
-      const dataToSend = {
+      const data = {
         client: form.client,
         products: [
           {
@@ -55,9 +40,12 @@ function Orders() {
         ],
       };
 
-      console.log("Enviando pedido:", dataToSend);
+      console.log("Enviando pedido:", data);
 
-      await API.post("/orders", dataToSend);
+      await API.post("/orders", data);
+
+      alert("Pedido creado");
+      fetchData();
 
       setForm({
         client: "",
@@ -65,27 +53,32 @@ function Orders() {
         quantity: 1,
         price: 0,
       });
-
-      getOrders();
     } catch (error) {
-      console.error(error.response?.data || error);
-      alert("Error al crear pedido");
+      console.error("ERROR AL CREAR PEDIDO:", error.response?.data);
+    }
+  };
+
+  // 🔥 MARCAR COMO ENTREGADO
+  const markAsDelivered = async (id) => {
+    try {
+      await API.put(`/orders/${id}/status`);
+      fetchData();
+    } catch (error) {
+      console.error(error);
     }
   };
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-dark mb-4">
-        Pedidos
-      </h1>
+      <h2 className="text-2xl font-bold mb-4">Pedidos</h2>
 
-      <form onSubmit={handleSubmit} className="mb-6 flex gap-2 flex-wrap">
+      {/* FORMULARIO */}
+      <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
         <select
           value={form.client}
-          onChange={(e) =>
-            setForm({ ...form, client: e.target.value })
-          }
-          className="border p-2 rounded"
+          onChange={(e) => setForm({ ...form, client: e.target.value })}
+          className="border p-2"
+          required
         >
           <option value="">Cliente</option>
           {clients.map((c) => (
@@ -96,61 +89,70 @@ function Orders() {
         </select>
 
         <input
-          type="text"
           placeholder="Producto"
           value={form.product}
-          onChange={(e) =>
-            setForm({ ...form, product: e.target.value })
-          }
-          className="border p-2 rounded"
+          onChange={(e) => setForm({ ...form, product: e.target.value })}
+          className="border p-2"
+          required
         />
 
         <input
           type="number"
           placeholder="Cantidad"
           value={form.quantity}
-          onChange={(e) =>
-            setForm({ ...form, quantity: e.target.value })
-          }
-          className="border p-2 w-20 rounded"
+          onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+          className="border p-2 w-20"
         />
 
         <input
           type="number"
           placeholder="Precio"
           value={form.price}
-          onChange={(e) =>
-            setForm({ ...form, price: e.target.value })
-          }
-          className="border p-2 w-24 rounded"
+          onChange={(e) => setForm({ ...form, price: e.target.value })}
+          className="border p-2 w-20"
         />
 
-        <button className="bg-primary px-4 py-2 rounded">
+        <button className="bg-orange-500 text-white px-4">
           Agregar
         </button>
       </form>
 
-      <div className="space-y-2">
-        {orders.map((o) => (
-          <div key={o._id} className="bg-white p-3 rounded shadow">
-            {o.products?.map((p, i) => (
-              <div key={i}>
-                {p.product} x{p.quantity} - ${p.price}
-              </div>
-            ))}
+      {/* LISTA */}
+      {orders.map((o) => (
+        <div key={o._id} className="border p-3 mb-2 bg-white">
 
-            <div className="text-sm text-gray-600">
-              Cliente: {o.client?.name}
-            </div>
+          {/* PRODUCTOS */}
+          {o.products?.map((p, i) => (
+            <p key={i}>
+              {p.product} x{p.quantity} - ${p.price * p.quantity}
+            </p>
+          ))}
 
-            <div className="font-bold">
-              Total: ${o.total}
-            </div>
-          </div>
-        ))}
-      </div>
+          <p>Cliente: {o.client?.name}</p>
+          <p className="font-bold">Total: ${o.total}</p>
+
+          {/* 🔥 ESTADO */}
+          <p
+            className={
+              o.status === "ENTREGADO"
+                ? "text-green-600 font-bold"
+                : "text-red-600 font-bold"
+            }
+          >
+            Estado: {o.status || "PENDIENTE"}
+          </p>
+
+          {/* 🔥 BOTÓN */}
+          {(o.status === "PENDIENTE" || !o.status) && (
+            <button
+              onClick={() => markAsDelivered(o._id)}
+              className="mt-2 bg-green-500 text-white px-3 py-1 rounded"
+            >
+              Marcar como entregado
+            </button>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
-
-export default Orders;
